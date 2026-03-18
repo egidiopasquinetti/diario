@@ -357,11 +357,13 @@ function formatDateFull(d) {
   return DOW_IT[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS_IT[d.getMonth()] + ' ' + d.getFullYear();
 }
 function formatHistDate(str) {
-  const d = new Date(str + 'T12:00:00');
+  const parts = str.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
   return d.getDate() + ' ' + MONTHS_IT[d.getMonth()].slice(0,3) + ' ' + d.getFullYear();
 }
 function formatHistDateFull(str) {
-  const d = new Date(str + 'T12:00:00');
+  const parts = str.split('-');
+  const d = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]));
   return DOW_IT[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS_IT[d.getMonth()] + ' ' + d.getFullYear();
 }
 
