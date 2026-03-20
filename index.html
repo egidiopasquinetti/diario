@@ -78,6 +78,10 @@
   .mood-btn.sel-rage { border-color: var(--rage-border); background: var(--rage-bg); color: var(--rage); }
   .mood-btn.sel-ok { border-color: #8adabc; background: var(--ok-bg); color: var(--ok); }
   .mood-btn.sel-fatigue { border-color: var(--fatigue-border); background: var(--fatigue-bg); color: var(--fatigue); }
+  .mood-btn.sel-happy { border-color: #8adabc; background: #edf7f2; color: #1a7a50; }
+  .mood-btn.sel-normal { border-color: #c8c6be; background: var(--surface2); color: var(--text2); }
+  .he-mood.happy { background: #edf7f2; color: #1a7a50; }
+  .he-mood.normal { background: var(--surface2); color: var(--text2); }
 
   /* LOG BLOCKS */
   .log-block { margin-bottom: 20px; }
@@ -226,9 +230,10 @@
 
   <div class="sec-label">Com'è andata</div>
   <div class="mood-row">
-    <button class="mood-btn" id="mood-rage" onclick="selectMood('Incazzato')">😤<br>Incazzato</button>
     <button class="mood-btn" id="mood-ok" onclick="selectMood('Normale')">🙂<br>Normale</button>
+    <button class="mood-btn" id="mood-happy" onclick="selectMood('Felice')">😊<br>Felice</button>
     <button class="mood-btn" id="mood-fatigue" onclick="selectMood('Esausto')">😮‍💨<br>Esausto</button>
+    <button class="mood-btn" id="mood-rage" onclick="selectMood('Incazzato')">😤<br>Incazzato</button>
   </div>
 
   <!-- ARRABBIATURE LOG -->
@@ -291,7 +296,7 @@ const DOW_IT = ['domenica','lunedì','martedì','mercoledì','giovedì','venerd�
 const MONTHS_IT = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
 
 let currentDate = new Date();
-let selectedMood = null;
+let selectedMoods = [];
 // rageLog / fatigueLog: array di { id, time, text }
 let rageLog = [];
 let fatigueLog = [];
@@ -357,13 +362,11 @@ function formatDateFull(d) {
   return DOW_IT[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS_IT[d.getMonth()] + ' ' + d.getFullYear();
 }
 function formatHistDate(str) {
-  const s = typeof str === 'string' ? str : dateKey(str);
-  const p=s.split('-'); const d=new Date(+p[0],+p[1]-1,+p[2]);
+  const p=str.split('-'); const d=new Date(+p[0],+p[1]-1,+p[2]);
   return d.getDate() + ' ' + MONTHS_IT[d.getMonth()].slice(0,3) + ' ' + d.getFullYear();
 }
 function formatHistDateFull(str) {
-  const s = typeof str === 'string' ? str : dateKey(str);
-  const p=s.split('-'); const d=new Date(+p[0],+p[1]-1,+p[2]);
+  const p=str.split('-'); const d=new Date(+p[0],+p[1]-1,+p[2]);
   return DOW_IT[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS_IT[d.getMonth()] + ' ' + d.getFullYear();
 }
 
@@ -461,7 +464,7 @@ async function loadEntry() {
 }
 
 function clearForm() {
-  selectedMood = null;
+  selectedMoods = [];
   rageLog = [];
   fatigueLog = [];
   updateMoodUI();
@@ -470,7 +473,14 @@ function clearForm() {
 }
 
 function populateForm(entry) {
-  selectedMood = entry.mood || null;
+  // Retrocompatibilità: mood può essere stringa o array JSON
+  const rawMood = entry.mood || '';
+  try {
+    const parsed = JSON.parse(rawMood);
+    selectedMoods = Array.isArray(parsed) ? parsed : (parsed ? [parsed] : []);
+  } catch(e) {
+    selectedMoods = rawMood ? [rawMood] : [];
+  }
   updateMoodUI();
   // Parse JSON logs
   try { rageLog = JSON.parse(entry.arrabbiatura || '[]'); } catch(e) {
@@ -487,14 +497,17 @@ function populateForm(entry) {
 }
 
 function selectMood(m) {
-  selectedMood = selectedMood === m ? null : m;
+  const idx = selectedMoods.indexOf(m);
+  if (idx >= 0) selectedMoods.splice(idx, 1);
+  else selectedMoods.push(m);
   updateMoodUI();
 }
 
 function updateMoodUI() {
-  document.getElementById('mood-rage').className = 'mood-btn' + (selectedMood === 'Incazzato' ? ' sel-rage' : '');
-  document.getElementById('mood-ok').className = 'mood-btn' + (selectedMood === 'Normale' ? ' sel-ok' : '');
-  document.getElementById('mood-fatigue').className = 'mood-btn' + (selectedMood === 'Esausto' ? ' sel-fatigue' : '');
+  document.getElementById('mood-rage').className = 'mood-btn' + (selectedMoods.includes('Incazzato') ? ' sel-rage' : '');
+  document.getElementById('mood-fatigue').className = 'mood-btn' + (selectedMoods.includes('Esausto') ? ' sel-fatigue' : '');
+  document.getElementById('mood-ok').className = 'mood-btn' + (selectedMoods.includes('Normale') ? ' sel-normal' : '');
+  document.getElementById('mood-happy').className = 'mood-btn' + (selectedMoods.includes('Felice') ? ' sel-happy' : '');
 }
 
 async function saveEntry() {
@@ -511,7 +524,7 @@ async function saveEntry() {
   const rageClean = rageLog.filter(e => e.text.trim());
   const fatigueClean = fatigueLog.filter(e => e.text.trim());
 
-  if (!rageClean.length && !fatigueClean.length && !selectedMood) {
+  if (!rageClean.length && !fatigueClean.length && !selectedMoods.length) {
     showStatus('Nessun dato da salvare.', 'err');
     return;
   }
@@ -522,7 +535,7 @@ async function saveEntry() {
     await apiPost({
       action: 'save',
       data: dateKey(currentDate),
-      mood: selectedMood,
+      mood: JSON.stringify(selectedMoods),
       arrabbiatura: JSON.stringify(rageClean),
       fatica: JSON.stringify(fatigueClean)
     });
@@ -590,15 +603,25 @@ function loadMore() {
   document.getElementById('history-list').dataset.all = JSON.stringify(entries);
 }
 
+function parseMoods(raw) {
+  if (!raw) return [];
+  try {
+    const p = JSON.parse(raw);
+    return Array.isArray(p) ? p : (p ? [p] : []);
+  } catch(e) { return raw ? [raw] : []; }
+}
+function moodClass(m) {
+  return m === 'Incazzato' ? 'rage' : m === 'Esausto' ? 'fatigue' : m === 'Felice' ? 'happy' : 'normal';
+}
 function renderEntryCard(e) {
-  const moodClass = e.mood === 'Incazzato' ? 'rage' : e.mood === 'Esausto' ? 'fatigue' : 'ok';
+  const moodArr = parseMoods(e.mood);
   const rageItems = tryParseLog(e.arrabbiatura);
   const fatigueItems = tryParseLog(e.fatica);
   const preview = (rageItems[0]?.text || fatigueItems[0]?.text || '—').slice(0, 80);
   return `<div class="history-entry" onclick="openModal('${e.data}')">
     <div class="he-header">
       <div class="he-date">${formatHistDateFull(e.data)}</div>
-      ${e.mood ? `<span class="he-mood ${moodClass}">${e.mood}</span>` : ''}
+      ${moodArr.length ? moodArr.map(m => `<span class="he-mood ${moodClass(m)}">${m}</span>`).join(' ') : ''}
     </div>
     <div class="he-preview">${preview}</div>
     <div class="he-counts">
@@ -616,10 +639,10 @@ function openModal(dateStr) {
   const entry = allEntries.find(e => e.data === dateStr);
   if (!entry) return;
   document.getElementById('modal-date').textContent = formatHistDateFull(dateStr);
-  const moodClass = entry.mood === 'Incazzato' ? 'rage' : entry.mood === 'Esausto' ? 'fatigue' : 'ok';
+  const moodArr = parseMoods(entry.mood);
   const rageItems = tryParseLog(entry.arrabbiatura);
   const fatigueItems = tryParseLog(entry.fatica);
-  let html = entry.mood ? `<div style="margin-bottom:12px"><span class="he-mood ${moodClass}">${entry.mood}</span></div>` : '';
+  let html = moodArr.length ? `<div style="margin-bottom:12px">${moodArr.map(m=>`<span class="he-mood ${moodClass(m)}" style="margin-right:4px">${m}</span>`).join('')}</div>` : '';
   if (rageItems.length) {
     html += `<div class="modal-sec-label rage">Arrabbiature (${rageItems.length})</div>`;
     html += rageItems.map(i => `<div class="modal-log-item"><div class="modal-log-time">${i.time}</div><div class="modal-log-text">${i.text}</div></div>`).join('');
@@ -761,7 +784,7 @@ function renderDashboard(s) {
   if (s.moodCount && Object.keys(s.moodCount).length) {
     const labels = Object.keys(s.moodCount);
     const data = labels.map(k => s.moodCount[k]);
-    const colors = labels.map(k => k === 'Incazzato' ? '#c94a22' : k === 'Esausto' ? '#1e6fa8' : '#1a7a50');
+    const colors = labels.map(k => k === 'Incazzato' ? '#c94a22' : k === 'Esausto' ? '#1e6fa8' : k === 'Felice' ? '#1a7a50' : '#9e9d96');
     if (charts.mood) charts.mood.destroy();
     charts.mood = new Chart(document.getElementById('chart-mood'), {
       type: 'doughnut',
