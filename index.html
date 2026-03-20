@@ -354,19 +354,26 @@ function nowTime() {
 }
 function formatDateMain(d) {
   if (isToday(d)) return 'Oggi';
-  const _d1=dateKey(d).split('-'); const _d2=dateKey(new Date()).split('-'); const diff=Math.round((new Date(+_d1[0],+_d1[1]-1,+_d1[2])-new Date(+_d2[0],+_d2[1]-1,+_d2[2]))/86400000);
+  const diff=Math.round((parseDate(dateKey(d))-parseDate(dateKey(new Date())))/86400000);
   if (diff === -1) return 'Ieri';
   return DOW_IT[d.getDay()].charAt(0).toUpperCase() + DOW_IT[d.getDay()].slice(1);
 }
 function formatDateFull(d) {
   return DOW_IT[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS_IT[d.getMonth()] + ' ' + d.getFullYear();
 }
+function parseDate(str) {
+  if (!str) return new Date();
+  if (str instanceof Date) return str;
+  const s = typeof str === 'string' ? str : dateKey(str);
+  const p = s.split('-');
+  return new Date(+p[0], +p[1]-1, +p[2]);
+}
 function formatHistDate(str) {
-  const p=str.split('-'); const d=new Date(+p[0],+p[1]-1,+p[2]);
+  const d = parseDate(str);
   return d.getDate() + ' ' + MONTHS_IT[d.getMonth()].slice(0,3) + ' ' + d.getFullYear();
 }
 function formatHistDateFull(str) {
-  const p=str.split('-'); const d=new Date(+p[0],+p[1]-1,+p[2]);
+  const d = parseDate(str);
   return DOW_IT[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS_IT[d.getMonth()] + ' ' + d.getFullYear();
 }
 
@@ -671,7 +678,7 @@ async function deleteFromModal() {
 
 function editFromModal() {
   if (!modalDate) return;
-  const mp=modalDate.split('-'); currentDate=new Date(+mp[0],+mp[1]-1,+mp[2]);
+  currentDate=parseDate(modalDate);
   renderDateStrip();
   const entry = allEntries.find(e => e.data === modalDate);
   clearForm();
@@ -736,7 +743,7 @@ function renderDashboard(s) {
 
   // Weekly chart
   if (s.weeklySeries && s.weeklySeries.length) {
-    const labels = s.weeklySeries.map(w => { const p=w.week.split('-'); const d=new Date(+p[0],+p[1]-1,+p[2]); return d.getDate()+'/'+(d.getMonth()+1); });
+    const labels = s.weeklySeries.map(w => { const d=parseDate(w.week); return d.getDate()+'/'+(d.getMonth()+1); });
     if (charts.weekly) charts.weekly.destroy();
     charts.weekly = new Chart(document.getElementById('chart-weekly'), {
       type: 'line',
