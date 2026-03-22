@@ -424,7 +424,7 @@ function renderLog(type) {
     <div class="log-entry-item ${type}" id="lei-${e.id}">
       <div class="lei-header">
         <span style="font-size:11px;color:var(--text3);font-weight:500;margin-right:2px">🕐</span>
-        <input class="lei-time-edit" type="time" value="${e.time}" onchange="updateLogTime('${type}','${e.id}',this.value)" title="Modifica orario">
+        <input class="lei-time-edit" type="text" value="${e.time}" pattern="[0-2][0-9]:[0-5][0-9]" maxlength="5" placeholder="HH:MM" onchange="updateLogTime('${type}','${e.id}',this.value)" title="Modifica orario (HH:MM)">
         <button class="lei-del" onclick="removeLogEntry('${type}','${e.id}')" title="Elimina">×</button>
       </div>
       <textarea class="lei-text ${colorClass}" id="lei-text-${e.id}" rows="3"
@@ -617,8 +617,10 @@ function tryParseLog(str) {
 function renderHistory(entries) {
   const list = document.getElementById('history-list');
   if (!entries.length) { list.innerHTML = '<div class="empty-state">Nessuna voce trovata.</div>'; return; }
-  const shown = entries.slice(0, HISTORY_PAGE);
-  const rest = entries.length - shown.length;
+  // Sort newest first
+  const sorted = [...entries].sort((a, b) => b.data.localeCompare(a.data));
+  const shown = sorted.slice(0, HISTORY_PAGE);
+  const rest = sorted.length - shown.length;
   list.innerHTML = shown.map(e => renderEntryCard(e)).join('') +
     (rest > 0 ? `<button class="load-more-btn" onclick="loadMore()">Carica altri ${rest}…</button>` : '');
   list.dataset.all = JSON.stringify(entries);
@@ -626,9 +628,10 @@ function renderHistory(entries) {
 
 function loadMore() {
   const entries = JSON.parse(document.getElementById('history-list').dataset.all || '[]');
+  const sorted = [...entries].sort((a, b) => b.data.localeCompare(a.data));
   const current = document.querySelectorAll('.history-entry').length;
-  const more = entries.slice(0, current + HISTORY_PAGE);
-  const rest = entries.length - more.length;
+  const more = sorted.slice(0, current + HISTORY_PAGE);
+  const rest = sorted.length - more.length;
   document.getElementById('history-list').innerHTML = more.map(e => renderEntryCard(e)).join('') +
     (rest > 0 ? `<button class="load-more-btn" onclick="loadMore()">Carica altri ${rest}…</button>` : '');
   document.getElementById('history-list').dataset.all = JSON.stringify(entries);
@@ -657,7 +660,7 @@ function renderEntryCard(e) {
     <div class="he-preview">${preview}</div>
     <div class="he-counts">
       ${rageItems.length ? `<span class="he-count"><span class="dot" style="background:var(--rage)"></span>${rageItems.length} arrabbiatura${rageItems.length > 1 ? 'e' : ''}</span>` : ''}
-      ${fatigueItems.length ? `<span class="he-count"><span class="dot" style="background:var(--fatigue)"></span>${fatigueItems.length} fatica${fatigueItems.length > 1 ? 'e' : ''}</span>` : ''}
+      ${fatigueItems.length ? `<span class="he-count"><span class="dot" style="background:var(--fatigue)"></span>${fatigueItems.length} fatica${fatigueItems.length > 1 ? 'he' : ''}</span>` : ''}
     </div>
     <div class="he-total">${rageItems.length + fatigueItems.length} eventi totali</div>
   </div>`;
