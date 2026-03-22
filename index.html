@@ -133,6 +133,12 @@
   .search-wrap { position: relative; margin-bottom: 14px; }
   .search-input { width: 100%; padding: 10px 14px 10px 38px; background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 15px; color: var(--text); }
   .search-input:focus { outline: 2px solid var(--accent); }
+  .filter-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-btn { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); font-size: 12px; font-weight: 500; color: var(--text2); cursor: pointer; white-space: nowrap; }
+  .filter-btn.active-all { border-color: var(--accent); background: var(--accent); color: var(--bg); }
+  .filter-btn.active-rage { border-color: var(--rage-border); background: var(--rage-bg); color: var(--rage); }
+  .filter-btn.active-fatigue { border-color: var(--fatigue-border); background: var(--fatigue-bg); color: var(--fatigue); }
+  .he-total { font-size: 11px; color: var(--text3); margin-top: 4px; }
   .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text3); pointer-events: none; }
   .history-entry { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; cursor: pointer; }
   .history-entry:hover { background: var(--surface2); }
@@ -264,7 +270,12 @@
 <div id="view-storico" class="view">
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
-    <input class="search-input" id="search-input" type="search" placeholder="Cerca nelle voci…" oninput="filterHistory(this.value)" autocorrect="off" autocomplete="off">
+    <input class="search-input" id="search-input" type="search" placeholder="Cerca nelle voci…" oninput="applyFilters()" autocorrect="off" autocomplete="off">
+  </div>
+  <div class="filter-row">
+    <button class="filter-btn active-all" id="filter-all" onclick="setFilter('all')">Tutto</button>
+    <button class="filter-btn" id="filter-rage" onclick="setFilter('rage')">Solo arrabbiature</button>
+    <button class="filter-btn" id="filter-fatigue" onclick="setFilter('fatigue')">Solo fatiche</button>
   </div>
   <div id="history-list"></div>
 </div>
@@ -301,6 +312,7 @@ let selectedMoods = [];
 let rageLog = [];
 let fatigueLog = [];
 let allEntries = [];
+let activeFilter = 'all';
 let modalDate = null;
 let charts = {};
 
@@ -576,13 +588,25 @@ async function loadHistory(force) {
   renderHistory(allEntries);
 }
 
-function filterHistory(q) {
-  const lq = q.trim().toLowerCase();
-  const filtered = lq ? allEntries.filter(e => {
+function setFilter(f) {
+  activeFilter = f;
+  ['all','rage','fatigue'].forEach(id => {
+    const btn = document.getElementById('filter-'+id);
+    btn.className = 'filter-btn' + (f === id ? ' active-'+id : '');
+  });
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = (document.getElementById('search-input').value || '').trim().toLowerCase();
+  let filtered = allEntries;
+  if (activeFilter === 'rage') filtered = filtered.filter(e => tryParseLog(e.arrabbiatura).length > 0);
+  if (activeFilter === 'fatigue') filtered = filtered.filter(e => tryParseLog(e.fatica).length > 0);
+  if (q) filtered = filtered.filter(e => {
     const rageText = tryParseLog(e.arrabbiatura).map(x => x.text).join(' ').toLowerCase();
     const fatigueText = tryParseLog(e.fatica).map(x => x.text).join(' ').toLowerCase();
-    return rageText.includes(lq) || fatigueText.includes(lq) || (e.mood||'').toLowerCase().includes(lq);
-  }) : allEntries;
+    return rageText.includes(q) || fatigueText.includes(q) || (e.mood||'').toLowerCase().includes(q);
+  });
   renderHistory(filtered);
 }
 
@@ -635,6 +659,7 @@ function renderEntryCard(e) {
       ${rageItems.length ? `<span class="he-count"><span class="dot" style="background:var(--rage)"></span>${rageItems.length} arrabbiatura${rageItems.length > 1 ? 'e' : ''}</span>` : ''}
       ${fatigueItems.length ? `<span class="he-count"><span class="dot" style="background:var(--fatigue)"></span>${fatigueItems.length} fatica${fatigueItems.length > 1 ? 'e' : ''}</span>` : ''}
     </div>
+    <div class="he-total">${rageItems.length + fatigueItems.length} eventi totali</div>
   </div>`;
 }
 
