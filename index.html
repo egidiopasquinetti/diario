@@ -474,7 +474,7 @@ async function loadEntry() {
   if (!getApiUrl()) return;
   showStatus('Caricamento…', 'loading');
   try {
-    const entry = await apiCall({ action: 'get', date: dateKey(currentDate) });
+    const entry = await apiCall({ action: 'get', date: dateKey(currentDate), _t: Date.now() });
     if (entry) populateForm(entry);
     showStatus('', '');
   } catch(e) {
@@ -660,7 +660,7 @@ function renderEntryCard(e) {
     <div class="he-preview">${preview}</div>
     <div class="he-counts">
       ${rageItems.length ? `<span class="he-count"><span class="dot" style="background:var(--rage)"></span>${rageItems.length} arrabbiatura${rageItems.length > 1 ? 'e' : ''}</span>` : ''}
-      ${fatigueItems.length ? `<span class="he-count"><span class="dot" style="background:var(--fatigue)"></span>${fatigueItems.length} fatica${fatigueItems.length > 1 ? 'he' : ''}</span>` : ''}
+      ${fatigueItems.length ? `<span class="he-count"><span class="dot" style="background:var(--fatigue)"></span>${fatigueItems.length} ${fatigueItems.length > 1 ? 'fatiche' : 'fatica'}</span>` : ''}
     </div>
     <div class="he-total">${rageItems.length + fatigueItems.length} eventi totali</div>
   </div>`;
